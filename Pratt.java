@@ -455,7 +455,7 @@ public class Pratt {
           default -> throw new IllegalArgumentException("unknown char: " + ch);
         }
       }
-      value = eof ? "eof" : this.input.substring(col, this.pos);
+      value = eof ? (col == this.pos ? "eof" : this.input.substring(col, this.pos)) : this.input.substring(col, this.pos);
       token = new Token(this.tk, value, col, line);
       return token;
     }
@@ -648,6 +648,9 @@ public class Pratt {
         // 后缀: 4!
         node = new PostfixOpNode(left, op);
         this.lexer.next();
+      } else if (op.kind.isInfix()) {
+        // 中缀: 1 + 2
+        node = new InfixOpNode(left, op, this.parse(op.kind.getPrecedence() - 1));
       } else {
         node = left;
       }
@@ -675,8 +678,18 @@ public class Pratt {
 
   }
 
-
-  public static class Calculator implements Visitor<Double, Void> {
+  public static class Calculator {
+    
+    public double calculate(String input) {
+      var lexer = new Lexer(input);
+      var parser = new Parser(lexer);
+      var expr = parser.parse();
+      return expr.accept(new CalculatorVisitor(), null);
+    }
+    
+  }
+  
+  public static class CalculatorVisitor implements Visitor<Double, Void> {
 
     @Override
     public Double visit(ValueNode n, Void ctx) {
@@ -738,11 +751,8 @@ public class Pratt {
     // 正则: Thompson算法 -> NFA
     // NFA：子集构造算法 -> DFA
     // DFA: Hopcroft最小化算法 -> 词法分析器
-    var lexer = new Lexer("305 << 2 - 212 + 4 * 5!");
-    var parser = new Parser(lexer);
-    var expr = parser.parse();
     var calculator = new Calculator();
-    System.out.println(expr.accept(calculator, null));
+    System.out.println(calculator.calculate("305 << 2 - 212 + 4 * 5!"));
   }
 
 }
